@@ -1,0 +1,240 @@
+---
+title: "SF_wk1"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse) 
+library(tidyquant)
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+library(readxl)
+library(esquisse)
+library(here)
+library(janitor)
+library(ggthemes)
+library(ggrepel)
+library(gt)
+library(viridis)
+library(hrbrthemes)
+library(RColorBrewer)
+library(timetk)
+
+```
+
+# Week 1: RStudio and publishing your first Quarto document
+
+## Agenda
+
+-   Who these sessions are designed for
+    -   mainly those with no programming background
+-   A tour of R-Studio
+    -   Basic terminology: objects and data types
+    -   Libraries (and how to import them)
+    -   Executing code
+    -   Typing in the script vs the console
+    -   The importance of the "global environment" concept
+-   Importing data
+-   Tidyverse vs Base R
+
+## Terminology
+
+It's important to understand some basic terminology, specifically objects and data types in R, so that you understand how those objects interact with R code, how they should be manipulated, and what people are talking about online when you go asking for help.
+
+### Objects
+
+-   Objects in R are what we call variables in other programming languages. They are instances of a class. A vector, a matrix, a dataframe (DF), a list, an array, or a factor are all objects in R. Everything in R is an object
+-   Things to keep in mind when creating an object:
+    -   Should be short and explicit
+    -   Should not start with a number ex. 5Data. R will not recognize this
+    -   "Data" is different than "data" as R is case sensitive
+    -   Do not include spaces in the name of your object. R considers this as separate text
+    -   Avoid using punctuation other than a period (.), dash (-), or underscore ( \_ )
+    -   The names of default fundamental functions should not be used as object names in R. eg: function, if, else, repeat, etc.
+
+```{r}
+# Creating an object
+
+distance_km <- 134
+
+# Print the object 
+
+distance_km
+
+dice <- c(1,2,3,4,5,6)
+
+
+
+
+
+```
+
+Important concept: to permanently change an object, you need to "save" it as a new object or to the same name as the current object. There are times where we might want to manipulate the data for data vis purposes but do not want to permanently change the underlying DF. In those instances we would not save to a new object.
+
+Example:
+
+```{r}
+str0 <- "2012-03-15"
+
+as.Date(str0, format = "%Y-%m-%d")
+
+class(str0)
+
+# We tried to change the data type but it still reads as zero. Need to save it to a new object or the name of the same one. 
+
+str0 <- as.Date(str0, format = "%Y-%m-%d")
+
+class(str0)
+
+```
+
+### Data types
+
+-   Character (chr)
+
+    -   Used to specify character or string values in a variable. In programming, a string is a set of characters.
+    -   "Apple" - note the quotations around it. If a variable is labeled a character, you need to include these.
+
+```{r}
+    apple <- "Apple"
+
+    apple
+
+    class(apple)
+
+```
+
+-   Double (dbl); also known as numeric
+
+    -   stores regular numbers
+
+```{r}
+
+    class(dice)
+
+```
+
+-   Integers (int)
+
+    -   stores numbers that can be written without a decimal point + Do not worry about the difference between these two. R converts freely between them as needed based on the numbers and operations you are passing it.
+
+```{r}
+    numbers <- c(1L,2L,3L)
+
+    numbers
+
+    class(numbers)
+
+```
+
+-   Logicals
+
+    -   Any time you type TRUE or FALSE, in capital letter (w/out quotation marks), R will treat the input as logical data
+
+```{r}
+logic <- c(TRUE,FALSE)
+
+logic
+
+class(logic)
+```
+
+-   Date (dte), POSIXlt, and POSIXct
+    -   dates can be tricky to work with and will typically be imported as strings (character). The problem with that is when we want to manipulate the dates in the DF for data vis, having it classified as a character will usually reject the command.
+    -   there are three basic date and time classes: Date, POSIXlt, and POSIXct. Class Date handles dates w/out times. POSIXct (calendar time) and POSIXlt (local time) represent dates and times (hours, minutes, seconds).
+
+```{r}
+str1 <- "2012-03-15"
+
+date1 <- as.Date(str1, format = "%Y-%m-%d")
+
+date1
+
+class(date1)
+
+date_string <- "2019-01-14 14:17:30"
+
+date_string <- as.POSIXct(date_string)
+
+class(date_string)
+
+```
+
+## Libraries and packages
+
+```{r}
+
+# Library stack -> this is a set of libraries I typically load, mainly because I'm too lazy to retype as needed so just copy paste from previous work. You can dump all this into your file, but it will be useful to load individually so you understand what features map to what library, as needed. 
+
+# You will hear the professor talk about different packages like Tidyr and tidyquant. Think of the package as the book you buy and put on your bookshelf. This is what happens when you install the package. When you use the library function, you're telling R to go to our library and open the tidyverse package for use.
+
+library(tidyverse) 
+library(tidyquant)
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+library(readxl)
+library(esquisse)
+library(here)
+library(janitor)
+library(ggthemes)
+library(ggrepel)
+library(gt)
+library(viridis)
+library(hrbrthemes)
+library(RColorBrewer)
+library(timetk)
+
+# Question: I tried to load a library and R said it doesn't recognize it. Why? 
+
+# Answer: This is probably because you either A) spelled it wrong or B) do not have the package installed. Let's say this happened with lubridate. Fix by installing the package as follows: 
+
+#install.packages("lubridate") # note that we need to put this in quotations as the install.packages function expects us to pass it a string rather than number or object (more on this in a bit)
+```
+
+## Importing Data
+
+```{r}
+
+# Let's now import a dataset for us to work with: 
+swaps <- read.csv("001_data//Fed_swaps.csv")
+
+# Observe how this populates in the "Environment" tab in the upper right corner. We can click on it to what the imported data looks like in a visually appealing format. This is a fairly clean data set. We could start working on this with minimal cleaning. We're not going to go into that today, but in subsequent session we'll work with some messier data to show how to get it into a "tidy" format. 
+
+# If I call the object by typing it's name in, we can also see what it looks like as output in the quarto document, as show below.
+swaps
+
+# If we use glimpse(), it displays in the console and shows the columns as rows. This is useful for allowing us to see all the column headers at once. Notice how when we call the object as just "swaps", it displays 8 of the 11 columns up front but we have to scroll right. There are a lot of commands in R that allow us to look at the dataset from various angles to understand what data we're working with and how to best clean it. We'll dive into exploratory analysis more in later sessions.  
+glimpse(swaps)
+
+# Problem: I call a function that I've seen you use before but R tells me it can't find it for use. 
+# Answer: If you're sure you're spelling/using it correctly, it's likely you haven't loaded the correct library. Do a google search for the function and what library it maps to and see if you have it listed in the code. If it is listed, make sure you've actually run the code so R knows it's active. 
+
+
+# importing from excel with multiple sheets.  
+dw19q1 <- read_excel("001_data//dw_data_2019-2020.xlsx", sheet = "19Q1", skip = 3)
+dw19q1
+
+```
+
+## Tidyverse and other packages vs Base R
+
+Tidyverse is essentially a package of packages (loading it loads ggplot2, dplyr, tidyr, readr, purrr, tibble, stringr, and forcats) that provides a series of tools for working with and manipulating data with better flow and visually appealing code. It provides a better interface that's similar to Python and looks much cleaner. It is important to understand the difference so you do not get confused when trying to figure out how to do something online. Generally for every command in Tidyr, there's a way to also do it in Base R, though it might not be as clean looking or intuitive.
+
+```{r}
+# Tidyr and dplyr method
+swaps %>%
+    select(c(Trade.Date,Amount)) %>%
+  filter(Amount > 300000000) 
+
+
+# is the same as 
+
+# Base method
+swaps_filtered <- subset(swaps[,c("Trade.Date", "Amount")], Amount > 300000000)
+
+
+
+```
