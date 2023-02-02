@@ -1,0 +1,333 @@
+---
+title: "Session2"
+format: html
+editor: visual
+---
+
+```{r}
+#| warning: false 
+
+library(tidyverse) 
+library(lubridate)
+library(readxl)
+library(esquisse)
+library(janitor)
+library(ggthemes)
+library(ggrepel)
+library(scales)
+library(naniar)
+library(viridis)
+library(vtable)
+#install.packages("naniar")
+emissions <- read.csv("emissions_dataset.csv")
+
+# stop R from defaulting to exponents for large values
+options(scipen = 1000000)
+
+
+
+```
+## Missing Values 
+
+When dealing with large data sets it can be helpful to get an idea of how many values are absent. There are many ways to do this in R, but one way I like is utilizing the below code from the "naniar" package. 
+
+install the package and load the library:
+
+install.package("naniar")
+
+library(naniar)
+
+
+```{r}
+gg_miss_var(emissions, show_pct = TRUE)
+
+```
+## Basic Charting 
+
+Creating useful visualizations of our data is both art and science. To start, we'll go over how to make basic versions of charts and follow with what the standard looks like for charts you will submit. For the homework this week we will accept the bare minimum as you're still getting used to the tech. Later on we will expect higher quality outputs like appropriate labeling and titles.
+
+This topic is incredibly broad and deep, and there is a massive amount of resources online dedicated to making some truly outrageous visualizations. You're welcome to pursue this as far as your time and patience allows, but let's first get the basics down. 
+
+This [website](https://r-graph-gallery.com/index.html) is a great reference for how to make a large variety of charts and spruce them up. As you do the homework, we recommend referencing this site.
+
+### Bar charts
+
+
+```{r}
+# open emissions dataset we already imported
+emissions %>%
+  # filter for three countries we'd like to see populations for
+  filter(country_name %in% c("Angola","Argentina","Australia")) %>%
+  # filter for the year we'd like to view
+  filter(year == 2010) %>%
+  
+  ggplot(aes(x = country_name, y = population)) +
+    geom_col()
+
+
+
+```
+```{r}
+emissions %>%
+  group_by(em_dm) %>%
+  na.omit() %>%
+  summarize(avg = mean(population)) %>%
+  
+  ggplot(aes(x = em_dm, y = avg)) +
+    geom_col()
+
+
+```
+
+
+###Line charts 
+
+```{r}
+emissions %>%
+  filter(year == 2010:2019) %>%
+  group_by(year) %>%
+  summarize(avg = mean(territorial_co2)) %>%
+  
+  ggplot(aes(x = year, y = avg)) +
+    geom_line()
+
+
+```
+
+### Scatter plots
+```{r}
+
+emissions %>%
+  na.omit() %>%
+  
+  ggplot(aes(x = gdp_usd_current_prices, y = territorial_co2)) +
+    geom_point()
+
+```
+
+Bubble chart
+
+```{r}
+
+emissions %>%
+  # filter(em_dm == "Emerging Markets") %>%
+  filter(year == 2010:2011) %>%
+  na.omit() %>%
+  
+    # size tells it to scale the size of the bubbles based on the size of the population
+    # color tells it to provide a color pattern based on the unique variables in the em_dm column
+    ggplot(aes(x = gdp_usd_current_prices, y = territorial_co2, size = population, color = em_dm)) +
+  
+    # alpha tells it to provide a level of transparency for each bubble
+    geom_point(alpha = .5)
+
+```
+### Histograms 
+
+```{r}
+emissions %>%
+  filter(em_dm == "Emerging Markets") %>%
+  filter(year == 2019) %>%
+  filter(territorial_co2 <1000) %>%
+  
+  ggplot(aes(x = territorial_co2)) +
+  
+    # binwith tells it how wide to make each column
+    # fill tells it what color to make the column 
+    # color tells it what color to make the edges of the column
+    geom_histogram(binwidth = 10, fill = "#69b3a2", color = "black")
+
+
+```
+### Boxplot
+
+```{r}
+
+emissions %>%
+  filter(year == 2010:2019) %>%
+  
+  ggplot(aes(x = em_dm, y = govt_expenditure_pct_gdp)) +
+    geom_boxplot()
+
+
+```
+
+This version shows the distribution across the box plot through the addiont of the geom_jitter command.
+```{r}
+
+emissions %>%
+  filter(year == 2010:2019) %>%
+  
+  ggplot(aes(x = em_dm, y = govt_expenditure_pct_gdp, fill = em_dm)) +
+    geom_boxplot() +
+    scale_fill_viridis(discrete = TRUE, alpha=0.6) +
+    geom_jitter(color="black", size=0.4, alpha=0.9) 
+
+
+```
+### Violin plots
+
+Allow you to compare the distribution of several groups by displaying their densities. 
+
+
+```{r}
+emissions %>%
+  filter(year == 2010:2019) %>%
+  
+  ggplot(aes(x = em_dm, y = govt_expenditure_pct_gdp, fill = em_dm)) +
+    geom_violin()
+
+
+```
+
+### Heatmaps 
+
+We can use a heatmap to display correlations between different variables. 
+
+```{r}
+emissions2 <- emissions %>%
+  na.omit() %>%
+  select(-c(1:4)) %>%
+  select(c(1:5))
+
+heatmap.2(cor(emissions2), Rowv = FALSE, Colv = FALSE, dendrogram = "none", 
+          cellnote = round(cor(emissions2),2), 
+          notecol = "black", key = TRUE, trace = 'none', margins = c(10,10), cexRow = .7, cexCol = .7,
+          main = "Emissions Comparison")
+
+
+```
+## Pivot Wider vs Pivot Longer 
+
+
+Transforming a table into long format means condensing columns down into a single variable column and shifting the values under a separate column. This makes the dataframe "longer" by creating many more rows. This is useful for building graphs, particularly comparing variables. Below shows how to pivot a dataframe to long format. Note that when looking up how to do this or looking at other code, you might see the author use "gather." Gather is an older version of this and is no longer maintained. It is recommended that you use pivot_longer and pivot_wider, both of which come from the tidyverse. 
+
+As a general rule, time series and plotting multiple variables is easier in long format, while analyzing data is typically easier in wide format. 
+
+First let's take a look at our current dataset. We see that we have 27 indicators (columns) with various values. Let's turn this into long form.  
+
+```{r}
+head(emissions)
+
+```
+
+```{r}
+emissions_long <- emissions %>%
+  
+  # cols tells it to grab the columns from gdp_us_current_prices all the way to cumulative_co2_per_capita
+  # names_to tells it to create a new column called "variable" and put all the column headers under it
+  # values_to tells it to take all the data contained in the columns and put it under a new column called "value"
+  
+  pivot_longer(cols = gdp_usd_current_prices:cumulative_co2_per_capita, names_to = "variable", values_to = "value")
+```
+
+We can see that we've gone from 31 total columns to 6 columns. But what can we do with this format? 
+
+```{r}
+head(emissions_long)
+
+
+```
+We can see in the graph below we're able to easily compare multiple variables, which is the main point for pivoting long 
+```{r}
+
+emissions_long %>%
+  filter(year == 2019) %>%
+ filter(country_name %in% c("Angola","Argentina","Australia")) %>%
+  filter(variable %in% c("govt_expenditure_pct_gdp", "debt_pct_gdp")) %>%
+  drop_na() %>%
+  #group_by(em_dm) %>%
+  #summarize(avg = mean(value)) %>%
+  
+  ggplot(aes(x = country_name, y = value, fill = variable)) +
+  geom_col(position = "dodge")
+
+```
+
+Let's look at another example where having data in long format will make our lives easier. We are going to briefly look at the World Bank's International Debt Statistics (IDS) dataset
+
+```{r}
+IDS <- read.csv("IDS_All.csv")
+
+head(IDS)
+
+```
+
+```{r}
+
+# For some reason R reads the years in with X's on the front so let's get rid of that
+colnames(IDS)<-gsub("X","", colnames(IDS))
+
+head(IDS)
+
+# figure out column numbers
+colnames(IDS)
+
+```
+
+```{r}
+
+# with data like this there's often not a lot of good record keeping the further back you go, so we'll hack off some of these year columns. I'm also not interested in things past 
+
+IDS <- IDS %>%
+  select(-c(7:36)) 
+
+# I'm doing this in two parts to validate the column numbers 
+
+IDS <- IDS %>% 
+  select(-c(28:35))
+
+head(IDS)
+
+
+```
+Now let's pivot this into long format so we can work some time series. 
+
+When we do this, year gets changed to the character data type. Something you'll see often is when you try to use as.numeric to fix this, it will give you an error message that "list object cannot be coerced to double." Try running the functon below as I do, which you can also find [here](https://rpubs.com/Teal_Emery/char_to_num). 
+
+```{r}
+IDS_long <- IDS %>%
+  pivot_longer(cols = `2000`:`2020`, names_to = "year", values_to = "value")
+
+# Teal's boutique function to deal with columns labled as characters that tell you they can't be coerced to numeric when trying change datatypes. Time series needs to be put in date or numeric for x-axis
+
+character_num_to_numeric <- function(character_num) {
+  character_num %>%
+  # take out the commas
+  str_remove_all(pattern = ",") %>%
+  # take out any blank spaces before or after the number
+  str_trim() %>%
+  # coerce to numeric
+  as.numeric()
+}
+
+# run the function with mutate
+IDS_long %>%
+  mutate(year = character_num_to_numeric(year))
+
+```
+
+Finally I can show you a time series graph. In later sessions we will go more in depth on how to make the graphs look much nicer.  
+
+```{r}
+IDS_long %>%
+  filter(Country.Name %in% c("Ghana", "Angola","Mozambique")) %>%
+  filter(year > 2010) %>%
+  #see why we want to change variable names? I made the mistake of not shortening and it was a pain for the entire project.
+  filter(Series.Name == "Average grace period on new external debt commitments (years)") %>%
+  
+  ggplot(aes(x = year, y = value, group = Country.Name, color = Country.Name)) +
+  geom_line()
+
+
+```
+What if we want to pivot wider and break out all the series names? I maxxed out my computer attempting this (it tried to create over 500 columns. Not advised) so we'll show it with the emissions dataset instead. 
+
+```{r}
+emissions_wide <- emissions_long %>%
+  pivot_wider(names_from = variable, values_from = value)
+
+head(emissions_wide)
+
+```
+
